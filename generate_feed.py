@@ -1,7 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
-import os
 
 BASE_URL = "https://www.whitehouse.gov"
 EO_URL = f"{BASE_URL}/presidential-actions/executive-orders/"
@@ -13,7 +12,8 @@ def get_executive_orders():
 
     orders = []
 
-    for article in soup.select("div.search-results > div.article-card")[:10]:
+    # Updated selector based on the new HTML structure
+    for article in soup.select("div.search-results > article")[:10]:
         title_tag = article.select_one("h2 a")
         if not title_tag:
             continue
@@ -33,38 +33,3 @@ def get_executive_orders():
         })
 
     return orders
-
-def extract_article_text(url):
-    try:
-        res = requests.get(url)
-        soup = BeautifulSoup(res.content, 'html.parser')
-        article = soup.select_one("div.body-content") or soup.select_one("article")
-
-        if article:
-            paragraphs = [p.text.strip() for p in article.select("p") if p.text.strip()]
-            
-            # Filter out boilerplate and preamble-like sections
-            good_paragraphs = []
-            for p in paragraphs:
-                if len(p) < 50:  # too short, likely junk
-                    continue
-                if p.lower().startswith(("by the authority", "section", "now, therefore", "this order")):
-                    continue
-                good_paragraphs.append(p)
-
-            return "\n\n".join(good_paragraphs[:8])  # limit to ~8 decent paragraphs
-
-    except Exception as e:
-        print(f"Error extracting {url}: {e}")
-    return ""
-
-def main():
-    print("RSS feed generation starting...")
-    eos = get_executive_orders()
-
-    print(f"Found {len(eos)} Executive Orders.")
-    for eo in eos:
-        print(f"- {eo['title']} ({eo['date']})")
-
-if __name__ == "__main__":
-    main()
