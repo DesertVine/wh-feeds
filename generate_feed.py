@@ -13,14 +13,14 @@ def get_executive_orders():
 
     orders = []
 
-    for article in soup.select("li.podcast-item")[:10]:  # limit to latest 10 for now
+    for article in soup.select("div.search-results > div.article-card")[:10]:
         title_tag = article.select_one("h2 a")
         if not title_tag:
             continue
         title = title_tag.text.strip()
         link = title_tag['href']
         date_tag = article.select_one("time")
-        date = date_tag['datetime'] if date_tag else None
+        date = date_tag['datetime'] if date_tag and date_tag.has_attr("datetime") else None
 
         full_url = link if link.startswith("http") else BASE_URL + link
         content = extract_article_text(full_url)
