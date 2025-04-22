@@ -10,7 +10,6 @@ def get_executive_orders():
     response = requests.get(EO_URL)
     soup = BeautifulSoup(response.content, 'html.parser')
 
-    print(f"\nDEBUG: {url}\n")
     print(soup.prettify()[:3000])
     print("\n" + "="*80 + "\n")
     
