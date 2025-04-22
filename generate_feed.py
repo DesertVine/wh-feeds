@@ -12,41 +12,41 @@ def extract_article_text(url):
         soup = BeautifulSoup(response.content, 'html.parser')
         article = soup.find("article")
 
-        if article:
-            paragraphs = article.find_all("p")
+        if not article:
+            return None
 
-            found_purpose = False
-            purpose_text = []
+        paragraphs = article.find_all("p")
 
-            for p in paragraphs:
-                text = p.get_text(strip=True)
+        purpose_text = []
+        found_purpose = False
 
-                # Look for the start of the 'Purpose' section
-                if "section 1" in text.lower() and "purpose" in text.lower():
-                    found_purpose = True
-                    purpose_text.append(text)
-                    continue
+        for i, p in enumerate(paragraphs):
+            text = p.get_text(strip=True)
 
-                # If we've found it, keep appending the next paragraph(s)
-                if found_purpose:
-                    if text:
-                        purpose_text.append(text)
-                    if len(purpose_text) >= 2:
-                        break  # Limit preview to 2 paragraphs
+            # Normalize quotes and whitespace just in case
+            text_clean = text.replace("’", "'").strip().lower()
 
-            if purpose_text:
-                return " ".join(purpose_text)
+            if "section 1" in text_clean and "purpose" in text_clean:
+                found_purpose = True
+                purpose_text.append(text)
+                if i + 1 < len(paragraphs):
+                    purpose_text.append(paragraphs[i + 1].get_text(strip=True))
+                break
+            elif not found_purpose and text_clean.startswith("purpose."):
+                found_purpose = True
+                purpose_text.append(text)
+                if i + 1 < len(paragraphs):
+                    purpose_text.append(paragraphs[i + 1].get_text(strip=True))
+                break
 
-            # Fallback: any paragraph that doesn't start with boilerplate
-            for p in paragraphs:
-                text = p.get_text(strip=True)
-                if text and not text.lower().startswith("by the authority vested in me"):
-                    return text
+        if found_purpose:
+            return " ".join(purpose_text)
 
-        # Final fallback: meta description
-        meta_desc = soup.find("meta", attrs={"name": "description"})
-        if meta_desc and meta_desc.get("content"):
-            return meta_desc["content"]
+        # Backup: try to find a paragraph that isn't just formal language
+        for p in paragraphs:
+            text = p.get_text(strip=True)
+            if text and not text.lower().startswith("by the authority vested in me"):
+                return text
 
         return None
 
