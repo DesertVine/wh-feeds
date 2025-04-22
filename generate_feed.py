@@ -11,21 +11,26 @@ def extract_article_text(url):
         response = requests.get(url)
         soup = BeautifulSoup(response.content, 'html.parser')
 
-        # Look inside the main content area
-        main_article = soup.find("article")
-        if not main_article:
-            return None
+        # Try to find the <article> tag
+        article = soup.find("article")
+        if article:
+            # Get all paragraphs in the article
+            paragraphs = article.find_all("p")
+            for p in paragraphs:
+                text = p.get_text(strip=True)
+                # Skip boilerplate
+                if text and not text.lower().startswith("by the authority vested in me"):
+                    return text
 
-        # Look for any <p> within the article, even deeply nested
-        paragraphs = main_article.find_all("p")
-        for p in paragraphs:
-            text = p.get_text(strip=True)
-            if text and not text.startswith("By the authority vested in me"):
-                return text
-        return paragraphs[0].get_text(strip=True) if paragraphs else None
+        # If nothing found, fall back to meta description
+        meta_desc = soup.find("meta", attrs={"name": "description"})
+        if meta_desc and meta_desc.get("content"):
+            return meta_desc["content"]
+
+        return None
 
     except Exception as e:
-        print(f"Error extracting text from {url}: {e}")
+        print(f"❌ Error extracting article text from {url}: {e}")
         return None
 
 def get_executive_orders():
