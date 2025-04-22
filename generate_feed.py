@@ -15,25 +15,35 @@ def extract_article_text(url):
         if article:
             paragraphs = article.find_all("p")
 
-            # Step 1: Look for first paragraph containing "Purpose"
+            found_purpose = False
+            purpose_text = []
+
             for p in paragraphs:
                 text = p.get_text(strip=True)
-                if "purpose" in text.lower():
-                    return text
 
-            # Step 2: Fall back to any non-boilerplate paragraph
+                # Look for the start of the 'Purpose' section
+                if "section 1" in text.lower() and "purpose" in text.lower():
+                    found_purpose = True
+                    purpose_text.append(text)
+                    continue
+
+                # If we've found it, keep appending the next paragraph(s)
+                if found_purpose:
+                    if text:
+                        purpose_text.append(text)
+                    if len(purpose_text) >= 2:
+                        break  # Limit preview to 2 paragraphs
+
+            if purpose_text:
+                return " ".join(purpose_text)
+
+            # Fallback: any paragraph that doesn't start with boilerplate
             for p in paragraphs:
                 text = p.get_text(strip=True)
                 if text and not text.lower().startswith("by the authority vested in me"):
                     return text
 
-            # Step 3: As last resort, return any non-empty paragraph
-            for p in paragraphs:
-                text = p.get_text(strip=True)
-                if text:
-                    return text
-
-        # Step 4: Fallback to meta description
+        # Final fallback: meta description
         meta_desc = soup.find("meta", attrs={"name": "description"})
         if meta_desc and meta_desc.get("content"):
             return meta_desc["content"]
