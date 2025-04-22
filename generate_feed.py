@@ -42,14 +42,22 @@ def extract_article_text(url):
         res = requests.get(url)
         soup = BeautifulSoup(res.content, 'html.parser')
 
-        # EO body lives here
-        article_div = soup.find("div", class_="wp-block-post-content")
-        if not article_div:
-            return "No content found."
+        # Try a few known content containers in priority order
+        possible_containers = [
+            "div.wp-block-post-content",   # Most articles use this
+            "article",                     # Some fallback structure
+            "div.entry-content",          # Just in case
+        ]
 
-        paragraphs = article_div.find_all("p")
-        text = "\n\n".join(p.get_text(strip=True) for p in paragraphs[:6])  # first 6 paragraphs
-        return text or "No meaningful content found."
+        for selector in possible_containers:
+            block = soup.select_one(selector)
+            if block:
+                paragraphs = block.find_all("p")
+                if paragraphs:
+                    text = "\n\n".join(p.get_text(strip=True) for p in paragraphs[:6])
+                    return text
+
+        return "No content found."
 
     except Exception as e:
         return f"Error fetching content: {e}"
