@@ -10,19 +10,28 @@ def extract_article_text(url):
     try:
         response = requests.get(url)
         soup = BeautifulSoup(response.content, 'html.parser')
-
-        # Try to find the <article> tag
         article = soup.find("article")
+
         if article:
-            # Get all paragraphs in the article
             paragraphs = article.find_all("p")
+
             for p in paragraphs:
                 text = p.get_text(strip=True)
-                # Skip boilerplate
-                if text and not text.lower().startswith("by the authority vested in me"):
+
+                # Skip common boilerplate or empty stuff
+                if not text:
+                    continue
+                if text.lower().startswith("by the authority vested in me"):
+                    continue
+                if "section" in text.lower() and "." in text:
                     return text
 
-        # If nothing found, fall back to meta description
+            # If nothing interesting, fall back
+            for p in paragraphs:
+                text = p.get_text(strip=True)
+                if text:
+                    return text
+
         meta_desc = soup.find("meta", attrs={"name": "description"})
         if meta_desc and meta_desc.get("content"):
             return meta_desc["content"]
