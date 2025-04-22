@@ -11,13 +11,19 @@ def extract_article_text(url):
         response = requests.get(url)
         soup = BeautifulSoup(response.content, 'html.parser')
 
-        # Try to get the first actual paragraph content after the heading
-        paragraphs = soup.select("article p")
+        # Look inside the main content area
+        main_article = soup.find("article")
+        if not main_article:
+            return None
+
+        # Look for any <p> within the article, even deeply nested
+        paragraphs = main_article.find_all("p")
         for p in paragraphs:
             text = p.get_text(strip=True)
             if text and not text.startswith("By the authority vested in me"):
                 return text
         return paragraphs[0].get_text(strip=True) if paragraphs else None
+
     except Exception as e:
         print(f"Error extracting text from {url}: {e}")
         return None
