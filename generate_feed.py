@@ -45,22 +45,18 @@ def extract_article_text(url):
         res = requests.get(url)
         soup = BeautifulSoup(res.content, 'html.parser')
 
-        # DEBUG
-        print(f"\nDEBUG HTML from: {url}\n")
-        print(soup.prettify()[:3000])
-        print("\n" + "=" * 80 + "\n")
-
-        # Try to find full Executive Order content
-        content_container = soup.find("div", class_="body-content")
-        if content_container:
-            paragraphs = content_container.find_all("p")
+        # Try to find the full article content
+        content_div = soup.find("div", class_="wp-block-post-content")
+        if content_div:
+            paragraphs = content_div.find_all("p")
             if paragraphs:
+                # Return first 6 paragraphs
                 return "\n\n".join(p.get_text(strip=True) for p in paragraphs[:6])
 
-        # Fallback: meta description
-        meta_desc = soup.find("meta", attrs={"name": "description"})
-        if meta_desc and meta_desc.get("content"):
-            return meta_desc["content"]
+        # Fallback to meta description if content block not found
+        meta = soup.find("meta", attrs={"name": "description"})
+        if meta and meta.get("content"):
+            return meta["content"]
 
         return "No content found."
 
