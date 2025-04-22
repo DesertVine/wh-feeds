@@ -46,14 +46,18 @@ def extract_article_text(url):
         res = requests.get(url)
         soup = BeautifulSoup(res.content, 'html.parser')
 
-        # First, try to get content from the post body (if it's there)
+        # 🔍 ADD THIS DEBUG BLOCK 👇
+        print(f"\nDEBUG: {url}\n")
+        print(soup.prettify()[:3000])  # First 3000 characters of HTML
+        print("\n" + "="*80 + "\n")
+
+        # Original content logic
         main_content = soup.select_one("div.wp-block-post-content")
         if main_content:
             paragraphs = main_content.find_all("p")
             if paragraphs:
                 return "\n\n".join(p.get_text(strip=True) for p in paragraphs[:6])
 
-        # Fallback: meta description
         meta_desc = soup.find("meta", attrs={"name": "description"})
         if meta_desc and meta_desc.get("content"):
             return meta_desc["content"]
