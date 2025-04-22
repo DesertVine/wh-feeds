@@ -42,15 +42,14 @@ def extract_article_text(url):
         res = requests.get(url)
         soup = BeautifulSoup(res.content, 'html.parser')
 
-        # Inspect the page to find the correct container for the article content
-        # For example, if the content is within a div with class 'body-content'
-        content_div = soup.find('div', class_='body-content')
-        if not content_div:
+        # EO body lives here
+        article_div = soup.find("div", class_="wp-block-post-content")
+        if not article_div:
             return "No content found."
 
-        paragraphs = content_div.find_all('p')
-        text = '\n\n'.join(p.get_text(strip=True) for p in paragraphs[:6])  # Adjust the number as needed
-        return text
+        paragraphs = article_div.find_all("p")
+        text = "\n\n".join(p.get_text(strip=True) for p in paragraphs[:6])  # first 6 paragraphs
+        return text or "No meaningful content found."
 
     except Exception as e:
         return f"Error fetching content: {e}"
