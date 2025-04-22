@@ -42,20 +42,17 @@ def extract_article_text(url):
         res = requests.get(url)
         soup = BeautifulSoup(res.content, 'html.parser')
 
-        # Try a few known content containers in priority order
-        possible_containers = [
-            "div.wp-block-post-content",   # Most articles use this
-            "article",                     # Some fallback structure
-            "div.entry-content",          # Just in case
-        ]
+        # First, try to get content from the post body (if it's there)
+        main_content = soup.select_one("div.wp-block-post-content")
+        if main_content:
+            paragraphs = main_content.find_all("p")
+            if paragraphs:
+                return "\n\n".join(p.get_text(strip=True) for p in paragraphs[:6])
 
-        for selector in possible_containers:
-            block = soup.select_one(selector)
-            if block:
-                paragraphs = block.find_all("p")
-                if paragraphs:
-                    text = "\n\n".join(p.get_text(strip=True) for p in paragraphs[:6])
-                    return text
+        # Fallback: meta description
+        meta_desc = soup.find("meta", attrs={"name": "description"})
+        if meta_desc and meta_desc.get("content"):
+            return meta_desc["content"]
 
         return "No content found."
 
