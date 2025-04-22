@@ -1,21 +1,34 @@
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
+import xml.etree.ElementTree as ET
 
 BASE_URL = "https://www.whitehouse.gov"
 EO_URL = f"{BASE_URL}/presidential-actions/executive-orders/"
+
+def extract_article_text(url):
+    try:
+        response = requests.get(url)
+        soup = BeautifulSoup(response.content, 'html.parser')
+
+        # Try to get the first actual paragraph content after the heading
+        paragraphs = soup.select("article p")
+        for p in paragraphs:
+            text = p.get_text(strip=True)
+            if text and not text.startswith("By the authority vested in me"):
+                return text
+        return paragraphs[0].get_text(strip=True) if paragraphs else None
+    except Exception as e:
+        print(f"Error extracting text from {url}: {e}")
+        return None
 
 def get_executive_orders():
     print("Fetching Executive Orders...")
     response = requests.get(EO_URL)
     soup = BeautifulSoup(response.content, 'html.parser')
 
-    print(soup.prettify()[:3000])
-    print("\n" + "="*80 + "\n")
-    
     orders = []
 
-    # Look for the new WordPress-based post listings
     posts = soup.select("li.wp-block-post")
 
     for post in posts[:10]:  # limit to most recent 10
@@ -40,36 +53,45 @@ def get_executive_orders():
 
     return orders
 
-def extract_article_text(url):
-    response = requests.get(url)
-    soup = BeautifulSoup(response.content, 'html.parser')
-    
-    content_div = soup.find('div', class_='wp-block-post-content')
-    if not content_div:
-        return None
+def build_rss_feed(items):
+    rss = ET.Element("rss", version="2.0")
+    channel = ET.SubElement(rss, "channel")
 
-    paragraphs = content_div.find_all('p')
+    ET.SubElement(channel, "title").text = "Recent Executive Orders"
+    ET.SubElement(channel, "link").text = EO_URL
+    ET.SubElement(channel, "description").text = "Latest Executive Orders from the White House"
 
-    for p in paragraphs:
-        text = p.get_text(strip=True)
-        if not text:
-            continue
-        # Skip boilerplate intro
-        if text.startswith("By the authority vested in me"):
-            continue
-        return text[:300] + "..."  # truncate for preview
+    for item in items:
+        entry = ET.SubElement(channel, "item")
+        ET.SubElement(entry, "title").text = item["title"]
+        ET.SubElement(entry, "link").text = item["url"]
+        ET.SubElement(entry, "guid").text = item["url"]
 
-    return None
+        if item["date"]:
+            pub_date = datetime.fromisoformat(item["date"].replace("Z", "+00:00"))
+            ET.SubElement(entry, "pubDate").text = pub_date.strftime("%a, %d %b %Y %H:%M:%S %z")
+
+        ET.SubElement(entry, "description").text = item["content"] or "No content found."
+
+    return ET.tostring(rss, encoding="unicode")
 
 def main():
     print("RSS feed generation starting...\n")
+
     eos = get_executive_orders()
 
-    print(f"Found {len(eos)} Executive Orders.\n")
+    print(f"\nFound {len(eos)} Executive Orders.\n")
     for eo in eos:
         print(f"- {eo['title']} ({eo['date']})")
         print(f"  → {eo['url']}")
-        print(f"  ↳ Preview: {eo['content'][:120]}...\n")
+        preview = eo['content'][:120] + "..." if eo['content'] else "No content found..."
+        print(f"  ↳ Preview: {preview}\n")
+
+    feed = build_rss_feed(eos)
+
+    with open("executive_orders.xml", "w", encoding="utf-8") as f:
+        f.write(feed)
+    print("✅ RSS feed written to executive_orders.xml")
 
 if __name__ == "__main__":
     main()
