@@ -46,18 +46,19 @@ def extract_article_text(url):
         res = requests.get(url)
         soup = BeautifulSoup(res.content, 'html.parser')
 
-        # 🔍 ADD THIS DEBUG BLOCK 👇
-        print(f"\nDEBUG: {url}\n")
-        print(soup.prettify()[:3000])  # First 3000 characters of HTML
-        print("\n" + "="*80 + "\n")
+        # ✅ This is the right place to print!
+        print(f"\nDEBUG HTML from: {url}\n")
+        print(soup.prettify()[:3000])
+        print("\n" + "=" * 80 + "\n")
 
-        # Original content logic
+        # Try real content
         main_content = soup.select_one("div.wp-block-post-content")
         if main_content:
             paragraphs = main_content.find_all("p")
             if paragraphs:
                 return "\n\n".join(p.get_text(strip=True) for p in paragraphs[:6])
 
+        # Try meta description fallback
         meta_desc = soup.find("meta", attrs={"name": "description"})
         if meta_desc and meta_desc.get("content"):
             return meta_desc["content"]
