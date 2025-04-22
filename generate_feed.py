@@ -41,27 +41,25 @@ def get_executive_orders():
     return orders
 
 def extract_article_text(url):
-    try:
-        res = requests.get(url)
-        soup = BeautifulSoup(res.content, 'html.parser')
+    response = requests.get(url)
+    soup = BeautifulSoup(response.content, 'html.parser')
+    
+    content_div = soup.find('div', class_='wp-block-post-content')
+    if not content_div:
+        return None
 
-        # Try to find the full article content
-        content_div = soup.find("div", class_="wp-block-post-content")
-        if content_div:
-            paragraphs = content_div.find_all("p")
-            if paragraphs:
-                # Return first 6 paragraphs
-                return "\n\n".join(p.get_text(strip=True) for p in paragraphs[:6])
+    paragraphs = content_div.find_all('p')
 
-        # Fallback to meta description if content block not found
-        meta = soup.find("meta", attrs={"name": "description"})
-        if meta and meta.get("content"):
-            return meta["content"]
+    for p in paragraphs:
+        text = p.get_text(strip=True)
+        if not text:
+            continue
+        # Skip boilerplate intro
+        if text.startswith("By the authority vested in me"):
+            continue
+        return text[:300] + "..."  # truncate for preview
 
-        return "No content found."
-
-    except Exception as e:
-        return f"Error fetching content: {e}"
+    return None
 
 def main():
     print("RSS feed generation starting...\n")
