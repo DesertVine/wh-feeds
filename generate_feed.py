@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 import xml.etree.ElementTree as ET
+import re
 
 BASE_URL = "https://www.whitehouse.gov"
 EO_URL = f"{BASE_URL}/presidential-actions/executive-orders/"
@@ -15,19 +16,21 @@ def extract_article_text(url):
         if article:
             paragraphs = article.find_all("p")
 
-            # First, look specifically for a paragraph mentioning "Purpose"
+            # Regex pattern to find "Section x. Purpose" or "Sec. x. Purpose", case-insensitive
+            pattern = re.compile(r'^(sec(?:tion)?\s+\d+\.?\s+purpose[:.]?)', re.IGNORECASE)
+
             for p in paragraphs:
                 text = p.get_text(strip=True)
-                if "purpose" in text.lower():
+                if pattern.match(text):
                     return text
 
-            # Fallback: just return the first meaningful non-boilerplate paragraph
+            # Fallback to first non-boilerplate paragraph
             for p in paragraphs:
                 text = p.get_text(strip=True)
                 if text and not text.lower().startswith("by the authority vested in me"):
                     return text
 
-        # Fallback: meta description
+        # Fallback to meta description
         meta_desc = soup.find("meta", attrs={"name": "description"})
         if meta_desc and meta_desc.get("content"):
             return meta_desc["content"]
