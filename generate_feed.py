@@ -11,18 +11,23 @@ def extract_article_text(url):
         response = requests.get(url)
         soup = BeautifulSoup(response.content, 'html.parser')
 
-        # Try to find the <article> tag
         article = soup.find("article")
         if article:
-            # Get all paragraphs in the article
             paragraphs = article.find_all("p")
+
+            # First, look specifically for a paragraph mentioning "Purpose"
             for p in paragraphs:
                 text = p.get_text(strip=True)
-                # Skip boilerplate
+                if "purpose" in text.lower():
+                    return text
+
+            # Fallback: just return the first meaningful non-boilerplate paragraph
+            for p in paragraphs:
+                text = p.get_text(strip=True)
                 if text and not text.lower().startswith("by the authority vested in me"):
                     return text
 
-        # If nothing found, fall back to meta description
+        # Fallback: meta description
         meta_desc = soup.find("meta", attrs={"name": "description"})
         if meta_desc and meta_desc.get("content"):
             return meta_desc["content"]
